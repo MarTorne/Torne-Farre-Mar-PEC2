@@ -1,0 +1,350 @@
+---
+title: "PAC 2"
+author: "Mar Torné Farré"
+date: "2025-05-05"
+output:
+  word_document:
+    toc: true
+    toc_depth: '3'
+  pdf_document:
+    toc: true
+    toc_depth: '3'
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    collapsed: true
+    smooth_scroll: true
+    theme: cerulean
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+
+# Resum
+
+### Estudi anàlisi d'expressió gènica diferencial en R/Bioconductor a partir del dataset GSE161731
+
+Iniciarem l'estudi fent una revisió de l'estudi **Dysregulated transcriptional responses to SARS-CoV-2 in the periphery support novel diagnostic approaches** identificat amb el codi GSE161731 a la página de **Gene Expression Omnibus** (https://www.ncbi.nlm.nih.gov/geo/). 
+
+Per tal de trobar lucidar nous aspectes de la resposta de l'hoste al SARS-CoV-2, l'estudi va realitzar la seqüenciació d'ARN en 77 mostres de sang perifèrica de 46 subjectes amb COVID-19 i les va comparar amb subjectes amb coronavirus estacional, grip, pneumònia bacteriana i controls sans. El transcriptoma de la sang perifèrica revela aspectes únics de la resposta immunitària a la COVID-19 i proporciona nous enfocaments de diagnòstic basats en biomarcadors. 
+
+En el diseny de l'estudi per definir la resposta transcripcional de la sang perifèrica de l'hoste en subjectes amb infecció per SARS-CoV-2, es va realitzar la seqüenciació d'ARN en mostres de 46 individus amb infecció per SARS-CoV-2 simptomàtica i amb PCR positiva, 14 dels quals es van mostrejar en múltiples moments. Els subjectes es van inscriure quan es van presentar per a atenció clínica i es va registrar el temps des de l'aparició dels símptomes per a cada mostra individual recollida (rang 1-35 dies). Els subjectes amb COVID-19 es van dividir en funció de la gravetat de la malaltia i el temps des de l'aparició dels símptomes (inici ≤10 dies, mitjans 11-21 dies, final >21 dies). Com a comparadors, es van perfilar mostres de sang emmagatzemades de pacients que es presentaven al Servei d'Urgències amb infecció respiratòria aguda (IRA) a causa de coronavirus estacional (n=59), grip (n=17) o pneumònia bacteriana (n=20), i controls sans coincidents (n=19).
+
+
+# Objectiu
+
+L'estudi té com a objectiu investigar els canvis 
+
+En aquest treball, realitzarem un anàlisi exploratòria que ens proporcioni una visió general del dataset. Per fer-ho, crearem un objecte de classe **SummarizedExperiment**, que contingui les dades i les metadades de l'estudi i durem a terme processos de depuració, filtratge i revisió del dataset.
+
+
+# Mètodes
+
+L'estudi està disponible a **Metabolomics Workbench** (https://www.metabolomicsworkbench.org/), amb el número d'estudi ST00029.
+
+A més, també es pot trobar al repositori **GitHub** (https://github.com/nutrimetabolomics/metaboData.git), dins la carpeta **Datasets/2024-fobitools-UseCase_1**.
+
+L'objecte **SummarizedExperiment** que utilitzarem té les següents característiques:
+
+  - Files: Cada metabòlit serà una fila dels fitxer.
+  -	Columnes: Cada mostra serà una columna, que conté les mostres d'orina i sang per cada subjecte amb el tractament associat (basal, suc de nabius o suc de poma).
+  - Metadades: Les metadades de les columnes inclouen informació sobre l'identificador del subjecte i el tractament assignat.
+
+Per al processament i l’anàlisi de les dades, utilitzarem **Bioconductor** i el paquet **POMA**, dues eines àmpliament utilitzades en bioinformàtica per al tractament de dades òmiques, especialment en metabolòmica.
+
+**Bioconductor** és una plataforma que proporciona paquets R per a l’anàlisi i la visualització de dades. L'utilitzarem per al maneig i anàlisi dels datasets metabolòmics, la normalització i el filtratge de dades.
+
+**POMA** és un paquet de **Bioconductor** dissenyat específicament per a l'anàlisi de dades metabolòmiques i altres dades òmiques. Les seves funcionalitats inclouen: el pre-processament de dades (filtratge de valors faltants, transformació, normalització), anàlisi estadística (tests estadístics, anàlisis multivariants, reducció de dimensionalitat) i visualització de resultats (boxplots, PCA, heatmaps).
+
+
+# Resultats
+
+### Descàrrega del dataset GSE161731
+
+A la pàgina de GEO hi trobem diferent informació diversa sobre l'estudi. En l'apartat **Downloas RNA-seq counts** hi trobem els següents fitxers:
+
+_Fitxers proporcionats pels autors_:
+
+  •	Series SOFT file (GSE161731_family.soft.gz) - Fitxer en format SOFT que conté les metadades de la sèrie, com ara informació sobre l'estudi, les mostres, els protocols utilitzats, els processos i anàlisis utilitzats...
+  
+  •	Series MINiML file (GSE161731_family.xml.tgz) - Fitxer en format XML que conté les metadades de la sèrie, com ara informació sobre l'estudi, les mostres, els protocols utilitzats, els processos i anàlisis utilitzats...
+  
+  REVISSSSAAARR•	Series Matrix file (GSE161731_series_matrix.txt.gz) - Fitxer tabular de GEO amb l’expressió gènica normalitzada o els valors processats per mostra. Són fitxers de text que inclouen una matriu de valors delimitada per tabulacions, generada a partir de la columna "VALUE" de cada mostra i encapçalada per les metadades de la sèrie.
+
+_Fitxers suplementaris_:
+
+  •	GSE161731_counts.csv.gz - Fitxer de format CSV amb la matriu de comptatges bruts de gens per mostra. Conté el nombre de lectures (reads) assignades a cada gen.
+  
+  •	GSE161731_counts_key.csv.gz - Fitxer de format CSV associat al fitxer de comptatges, amb el diccionari de les mostres. Conté 198 registres, és a dir, les claus de la matiu de dades. Aquestes claus serveixen per identificar les mostres a les matrius de comptatges.
+  
+  •	GSE161731_key.csv.gz - Fitxer de format CSV amb el diccionari de les mostres. Conté 196 registres, és a dir les claus úniques. Aquestes claus serveixen per identificar les mostres a les matrius de comptatges.
+  
+  •	GSE161731_xpr_nlcpm.csv.gz - Expressions normalitzades en log2 counts per milió (logCPM). 
+  
+  •	GSE161731_xpr_tpm_geo.txt.gz - Expressions en TPM (Transcripts Per Million).
+
+_Fitxers NCBI - Generats automàticament per GEO_
+
+  •	GSE161731_raw_counts_GRCh38.p13_NCBI.tsv.gz - Matriu de comptatges bruts per gen i per mostra, alineats contra el genoma de referència GRCh38.p13.
+  
+  •	GSE161731_norm_counts_FPKM_GRCh38.p13_NCBI.tsv.gz - Matriu de comptatges normalitzats en FPKM (Fragments Per Kilobase Million).
+  
+  •	GSE161731_norm_counts_TPM_GRCh38.p13_NCBI.tsv.gz - Matriu de comptatges normalitzats en TPM (Transcripts Per Million).
+
+  •	Human.GRCh38.p13.annot.tsv.gz - Taula d’anotació de gens utilitzada per GEO per etiquetar els gens de les matrius anteriors. Conté informació com l’identificador del gen, nom del gen, coordenades al genoma, tipus de gen, ... 
+
+
+```{r,eval=TRUE,echo=FALSE}
+# Instal·lem Bioconductor 
+if (!requireNamespace("BiocManager",quietly=TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install(c("GEOquery","SummarizedExperiment","EnsDb.Hsapiens.v86","AnnotationDbi","org.Hs.eg.db"))
+
+# Carreguem els paquets
+library(GEOquery)
+library(SummarizedExperiment)
+library(EnsDb.Hsapiens.v86)
+library(AnnotationDbi)
+library(org.Hs.eg.db)
+
+# Descarreguem els fitxers per guardar-los al repositori
+gse<-getGEO("GSE161731",GSEMatrix=TRUE)
+
+download.file("https://raw.githubusercontent.com/nutrimetabolomics/metaboData/refs/heads/main/Datasets/2024-fobitools-UseCase_1/features.csv",destfile="features.csv")
+#download.file("https://raw.githubusercontent.com/nutrimetabolomics/metaboData/refs/heads/main/Datasets/2024-fobitools-UseCase_1/metadata.csv",destfile="metadata.csv")
+#download.file("https://raw.githubusercontent.com/nutrimetabolomics/metaboData/refs/heads/main/Datasets/2024-fobitools-UseCase_1/metaboliteNames.csv",destfile="metabolites.csv")
+
+urld <- "https://www.ncbi.nlm.nih.gov/geo/download/?format=file&type=rnaseq_counts"
+path <- paste(urld, "acc=GSE161731", "file=GSE161731_raw_counts_GRCh38.p13_NCBI.tsv.gz", sep="&");
+tbl <- as.matrix(data.table::fread(path, header=T, colClasses="integer"), rownames=1)
+```
+
+En primer lloc descarreguem els fitxers i els guardem al repositori **GitHub** que hem creat per emmagatzemar tota la documentació del projecte.
+
+```{r,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
+# Carreguem el paquet SummarizedExperiment
+library(SummarizedExperiment)
+
+# Carreguem els arxius CSV des del repositori de GitHub
+features<-read.csv2("https://raw.githubusercontent.com/nutrimetabolomics/metaboData/refs/heads/main/Datasets/2024-fobitools-UseCase_1/features.csv",header=TRUE)
+metadata<-read.csv2("https://raw.githubusercontent.com/nutrimetabolomics/metaboData/refs/heads/main/Datasets/2024-fobitools-UseCase_1/metadata.csv",header=TRUE)
+metabolites<-read.csv2("https://raw.githubusercontent.com/nutrimetabolomics/metaboData/refs/heads/main/Datasets/2024-fobitools-UseCase_1/metaboliteNames.csv",header=TRUE)
+
+#head(features)  # Matriu de dades (features)
+#head(metadata)  # Grups de tractament (metadata)
+#head(metabolites)  # Informació sobre els metabòlits (metabolites) 
+```
+
+## Construcció d'un objecte de classe SummarizedExperiment
+
+A continuació, creem un objecte de classe **SummarizedExperiment** amb les dades i metadades de l'estudi. Realitzem diferents transformacions i adaptacions als fitxers per assegurar-nos que els camps comuns siguin iguals i estiguin en el mateix ordre en les bases de dades. A més, ajustarem alguns formats, com ara transformar els camps de **features** a valors numèrics.
+
+```{r,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
+# Comprovem les dimensions dels fitxers 
+cat("Dimensions dels datasets\n")
+dim(features) # Ha de coincidir amb (nrow(metabolites), nrow(metadata))
+dim(metabolites)  # Ha de tenir tantes files com features
+dim(metadata) # Ha de tenir tantes files com columnes de features
+
+# Comprovem els noms de les files i columnes
+#all(rownames(features) %in% metabolites$PubChem)   # Ha de ser TRUE
+#all(colnames(features) %in% metadata$ID)   # Ha de ser TRUE
+
+# Comprovem els noms de les files de metabolites i metadata
+rownames(metabolites)<-as.character(metabolites$PubChem)
+rownames(metadata)<-as.character(metadata$ID)
+
+# Ordenem les files de features segons metabolites$PubChem
+features<-features[match(metabolites$PubChem,rownames(features)),]
+#all(rownames(features)==rownames(metabolites))   # Ha de ser TRUE
+#all(colnames(features)==rownames(metadata))   # Ha de ser TRUE
+
+# Convertim features en una matriu i assignem els noms correctes a les files i columnes dels dataframes
+features[]<-lapply(features,as.numeric)
+
+# Creem l'objecte SummarizedExperiment
+object_se<-SummarizedExperiment(assays=list(counts=features),colData=metadata,rowData=metabolites)
+
+#assay(object_se)
+#colData(object_se)
+#rowData(object_se)
+```
+
+## Principals diferències entre les classes SummarizedExperiment i ExpressionSet
+
+La classes **SummarizedExperiment** i **ExpressionSet** són estructures utilitzades en bioinformàtica per emmagatzemar i manipular dades d’experiments genòmics o metabòlics. Tot i que tenen funcions similars, presenten diferències clau en el seu disseny i funcionalitats. 
+
+  - Estructura de Dades: **ExpressionSet** està dissenyat principalment per gestionar dades d’expressió gènica. Utilitza matrius per emmagatzemar les dades i compta amb components com _exprs()_, _pData()_ i _fData()_. **SummarizedExperiment** és més general i flexible. Admet qualsevol tipus de dades experimentals (com metabòliques, proteòmiques o epigenètiques) i utilitza un format basat en _assays()_ que pot contenir tant matrius com llistes de matrius.
+
+  - Representació de les Dades: **ExpressionSet** només admet una única matriu d’expressió, que acostuma a contenir dades d’intensitats o recomptes. **SummarizedExperiment** pot contenir múltiples matrius de dades a través de l’estructura _assays()_, cosa que resulta útil quan es tenen diferents tipus de mesuraments o normalitzacions.
+
+  - Metadades: **ExpressionSet** utilitza _pData()_ per a les anotacions de les mostres (files) i _fData()_ per a les característiques (gens/metabòlits). **SummarizedExperiment** utilitza _colData()_ per a la informació de les mostres, _rowData()_ per a les característiques i _metadata()_ per a informació addicional general sobre l’experiment.
+
+  - Flexibilitat i Extensibilitat: **ExpressionSet** està enfocat principalment a dades transcriptòmiques i ofereix menys flexibilitat per gestionar altres tipus d’experiments. **SummarizedExperiment** és més versàtil, ja que permet emmagatzemar qualsevol conjunt de matrius i metadades, cosa que el fa ideal per a aplicacions en metabolòmica, proteòmica o epigenòmica.
+
+  - Integració amb altres eines: **ExpressionSet** s'utilitza en paquets d’anàlisi transcriptòmic com _limma_ i _affy_. **SummarizedExperiment** és el format estàndard en _Bioconductor_ i és compatible amb eines com _DESeq2_, _edgeR_ i _ComplexHeatmap_.
+  
+
+## Anàlisi exploratori
+
+Un cop creat **object_es**, revisem la informació que conté per garantir la qualitat de les dades abans de fer les anàlisis. En primer lloc, eliminem 182 metabòlits que tenen tots el valors desconeguts, reduint el conjunt de 1.541 metabòlits a 1.359.
+
+A més, detectem que un dels metabòlits no té nom assignat. Per evitar eliminar-lo i mantenir-lo identificat, li assignem un codi específic de nom desconegut (99999).
+
+Finalment, observem que en diferents metabòlits hi ha valors iguals a 0, fet que podria afectar els anàlisis estadístics. Per tant, substituïm aquests valors per la meitat del valor mínim de cada fila (metabòlit), mètode habitualment utilitzat per evitar que els zeros interfereixin en els càlculs estadístics.
+
+I finalment, normalitzem **object_es** per assegurar que les comparacions entre metabòlits siguin adequades i que les diferències observades no es deguin a escales de mesura diferents. Utilitzem **Z-score** per ajustar les dades, garantint que les variacions siguin biològicament rellevants i no simplement el resultat de diferències en magnitud.
+
+```{r,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
+# Resum estadístic de les dades
+#summary(assay(object_se))  
+
+# Eliminem els metabòlits amb tots els valors a NA, n'hi han 182
+metabolits_NA<-apply(assay(object_se),1,function(x) all(is.na(x)))
+object_se<-object_se[!metabolits_NA,]
+
+# Un metabòlit té nom UNKNOWN
+cat("Metabòlits sense nom assignat\n")
+rownames(object_se)[rownames(object_se)=="UNKNOWN"]<-"99999"
+sum(rownames(object_se)=="99999")
+
+# Substituïm els zeros pel valor mínim/2 corresponent a cada fila
+assay_data<-assay(object_se)
+min_values<-apply(assay_data,1,function(x) ifelse(all(x==0|is.na(x)),NA,min(x[x>0], na.rm=TRUE)/2))
+for (i in seq_len(nrow(assay_data))){
+  assay_data[i,assay_data[i,]==0]<-min_values[i]
+}
+assay(object_se)<-assay_data
+
+# Normalitzem les dades per Z-score 
+assay(object_se)<-scale(assay(object_se))
+
+# Guardem l'objecte SummarizedExperiment
+save(object_se,file="object_se.Rda")
+#load("object_se.Rda")
+```
+
+Guardem **objecte_es** en format **Rda** al repositori. Aquest és un tipus de format binari utilitzat per R per emmagatzemar objectes en un fitxer que després es pot carregar fàcilment a la memòria. Aquest format permet desar un o més objectes a la vegada i preservar-ne l’estructura i les metadades.
+
+## Anàlisi exploratori amb POMA
+
+Per tenir una visió gràfica de la descriptiva, utilitzem el paquet **POMA**. Creem un objecte **SummarizedExperiment** a partir de les bases de dades **features** i **metadata**, ja que no ens permet formar-lo a partir de tres bases de dades. Transposem la matriu de **features** per ajustar-ne l'estructura a les necessitats de l'objecte del paquet.
+
+A continuació, eliminem 182 metabòlits que tenen tots els valors desconeguts. Imputem els valors perduts a la matriu mitjançant el mètode **k-nearest neighbors (kNN)**, amb un llindar de 20 per eliminar les mostres amb un nombre elevat de valors perduts. No obstant això, no s'elimina cap mostra, ja que no queden més valors perduts a l'objecte.
+
+Un cop imputades les dades, apliquem normalització mitjançant el mètode **log_pareto** per ajustar la distribució dels valors a les mostres, sense normalitzar-les individualment.
+
+```{r,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
+# Instal·lem Bioconductor 
+#if (!require("BiocManager", quietly = TRUE))
+#  install.packages("BiocManager")
+
+# Instal·lem POMA
+#BiocManager::install("POMA")
+
+library(POMA)
+library(ggtext)
+library(magrittr)
+library(ggplot2)
+
+# Creem un objecte SummarizedExperiment de dos bases de dades separades
+features_t<-t(features)  # Trasposem perquè POMA vol la matriu de dades al revés
+cat("Dimensions dels datasets\n")
+dim(metadata)
+dim(features_t)
+object_POMA<-PomaCreateObject(metadata=metadata,features=features_t)
+
+# Eliminem els metabòlits amb tots els valors NA i imputem
+cat("Valors perduts\n")
+sum(is.na(SummarizedExperiment::assay(object_POMA)))
+metabolits_NA<-apply(assay(object_POMA),1,function(x) all(is.na(x)))
+object_POMA<-object_POMA[!metabolits_NA,]
+object_POMA<-PomaImpute(object_POMA,zeros_as_na=FALSE,remove_na=TRUE,cutoff=20,method="knn")
+#assay(object_POMA)
+
+# Normalitzem les dades
+object_POMA_norm<-PomaNorm(object_POMA,sample_norm="none",method="log_pareto")
+
+# Representem l'efecte de la normalització
+PomaBoxplots(object_POMA,x="samples")
+PomaDensity(object_POMA,x="features")+ggplot2::theme(legend.position="none")
+PomaBoxplots(object_POMA_norm,x="samples")
+PomaDensity(object_POMA_norm,x="features")+ggplot2::theme(legend.position="none")
+
+# Revisem els outliers
+outlier_results<-PomaOutliers(object_POMA_norm)
+print(outlier_results)
+
+# Obtenim un objecte pre-processat sense outlier
+pre_processed_object_POMA<-PomaOutliers(object_POMA_norm)$data
+
+# Visualitzem els outliers
+PomaOutliers(pre_processed_object_POMA)$polygon_plot
+```
+
+En els boxplots que obtenim podem observar l'efecte de la normalització en les dades abans i després del procés. En el boxplot per grups experimentals (**Baseline**, **Apple**, **Cranberry**) amb les dades normalitzades es pot veure clarament la dispersió de valors per cada mostra. No sembla que hi hagi diferències evidents entre els grups, almenys a simple vista. La distribució dels valors en els boxplots de cada grup és bastant similar, amb una mediana propera a 0 i una dispersió bastant homogènia.
+
+Si comparem els gràfics de densitat abans i després de la normalització, s'observa una gran diferència: el que inicialment era un gràfic amb totes les dades concentrades al voltant de 0 en l'eix X ha passat a ser una representació més propera a una distribució normal.
+
+L’eix **Distance to group centroid** en el boxplot generat per **PomaOutliers()** representa la distància de cada mostra al centroide del seu grup. Aquest valor és el punt mitjà de totes les mostres d’un grup en un espai de múltiples dimensions (metabòlits) i mesura com de lluny està cada mostra del centre del seu grup. El grup **Cranberry**  és el que té les distancies més reduïdes, el que ens indica que les mostres estan ben integrades dins del grup. No obstant això, presenta dos mostres amb valors extrems que s'eliminen en el procés de depuració. En canvi, els grups **Apple** i **Basal** mostren distàncies més àmplies, suggerint una major variabilitat dins d’aquests grups.
+
+En el gràfic que mostra la distribució de les dades en un espai bidimensional, agrupades en tres categories:**Apple**, **Basal** i **Cranberry**. S’hi pot observar la disposició de cada grup i les seves regions de concentració. Després d’eliminar dues mostres del grup de nadius, que eren punts outliers, es veu com la regió del grup **Cranberry** es concentra.
+
+La superposició d’aquestes àrees suggereix un cert grau de similitud entre els grups, ja que les regions es solapen. Aquesta superposició indicaria que els efectes dels sucs sobre els metabòlits no estan diferenciats. No obstant això, s’aprecia clarament com el metabolisme de les participants es modifica després de consumir el suc de nabiu, ja que es redueix en comparació amb l’estat basal. En canvi, després de consumir el suc de poma, el metabolisme de les participants s'expandeix respecte a la seva condició basal.
+
+## Anàlisi complementari amb POMA
+
+```{r,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
+# Anàlisi de Components Principals (PCA) 
+PomaPCA(pre_processed_object_POMA,outcome=NULL,center=TRUE,scale=TRUE,ncomp=4,labels=FALSE,ellipse=FALSE,load_length=1)
+
+# Anàlisi de Clústers
+PomaClust(pre_processed_object_POMA,method="euclidean",k=NA,k_max=floor(min(dim(data))/2),show_clusters=TRUE,labels=FALSE)
+
+# Gràfic Heatmap
+PomaHeatmap(pre_processed_object_POMA,covs=NULL,sample_names=TRUE,feature_names=FALSE,show_legend=TRUE)
+```
+
+Realitzem un anàlisi de components principals seleccionant només quatre components, que expliquen gairebé el 100% de la variància. Això indica que les dades presenten una estructura clara i que no calen moltes components per estudiar-les.
+
+La primera component, **PC1**, explica el 69,82% de la variabilitat, representant la major part de la informació de les dades. **PC2** explica l’11,74%, **PC3** el 9,91% i **PC4** el 8,53%. Tot i que aquestes darreres components són menys informatives, ajuden a identificar patrons addicionals en les dades.
+
+L'anàlisi de càrregues (**loadings**) permet observar com contribueixen les variables (metabòlits) a cada component principal. **PC1** presenta càrregues negatives molt marcades en diversos metabòlits, indicant una gran influència d'aquests en aquesta component. Per contra, **PC2**, **PC3** i **PC4** tenen càrregues més petites, suggerint que capturen variacions més subtils. 
+
+També realitzem un anàlisi de clúster, que mostra dues agrupacions amb una separació força clara. Els punts del primer clúster es concentren més cap a l’esquerra i al centre del gràfic, mentre que els del segon clúster es situen més cap a la dreta. Això suggereix diferències en els patrons metabòlics entre els dos grups, la qual cosa requereix un estudi més detallat.
+
+Finalment, el gràfic **Heatmap** representa la distribució i els patrons d'expressió dels metabòlits a les mostres. Les files agrupen els metabòlits  segons la similitud en l'expressió, mentre que les columnes ordenen les mostres segons l'anàlisi de clustering jeràrquic. S'observa un cert patró on, la part esquerra concentra zones vermelles amb valors alts d'expressió metabòlica, mentre que la part dreta concentra zones blaves amb valors baixos d'expressió metabòlica. Només una petita franja blanca apareix a la part superior del gràfic. Tot i que no es percep una separació clara de les mostres pels grups experimentals, sí que es constata que les tres mostres de cada estudiant tendeixen a agrupar-se entre si.
+
+
+# Discussió
+
+Els resultats obtinguts en aquest estudi proporcionen una visió detallada de l'efecte del consum de suc de nabiu i de poma en el metabolisme de les participants. L'anàlisi exploratòria ha permès depurar i transformar les dades, assegurant-ne la qualitat abans d'executar les diferents tècniques estadístiques i de visualització.
+
+En termes de distribució de les dades, s'observa que el grup **Cranberry** presenta una major cohesió entre les seves mostres en comparació amb els grups **Apple** i **Basal**, la qual cosa suggereix una resposta més homogènia al consum de suc de nabiu. La variabilitat més elevada en el grup **Apple** podria estar relacionada amb factors individuals o amb una resposta metabòlica menys uniforme al suc de poma.
+
+L'anàlisi de components principals (PCA) ha permès identificar que la primera component explica gairebé el 70% de la variabilitat en les dades, la qual cosa indica una estructura clara en la base de dades. 
+
+Els patrons observats en els boxplots i els gràfics de densitat suggereixen que, tot i que hi ha un cert solapament entre grups, es poden detectar tendències diferenciades.
+
+L'anàlisi de clustering ha revelat dues agrupacions clares, fet que suggereix diferències metabòliques significatives entre alguns subconjunts de mostres.
+
+D'altra banda, el heatmap mostra que, encara que no hi ha una separació total entre els grups experimentals, les mostres de cada participant tendeixen a agrupar-se entre si. Aquest fet indica que les variacions entre les tres mostres són més petites que les que es pugin produir entre les estudiants, cosa que reforça la idea que el metabolisme de cada participant manté una certa consistència malgrat els canvis dietètics.
+
+
+# Conclusions
+
+L'estudi d'aquesta base de dades ha permès obtenir una visió global de les dades metabolòmiques i les seves característiques principals. L'anàlisi realitzat indica que el consum de suc de nabiu pot tenir un impacte metabòlic diferenciat respecte al suc de poma.
+
+Tot i que no s'observen diferències dràstiques entre els grups, la combinació d'anàlisi de components principals, clustering i heatmap suggereix que existeixen patrons diferenciats en la resposta metabòlica als dos tipus de suc. Aquestes diferències haurien de ser estudiades amb mètodes estadístics més detallats que aprofundissin en els metabòlits implicats en aquests canvis.
+
+En resum, aquest treball ha permès explorar el dataset ST000291 i confirmar que els canvis metabòlics induïts pel consum de suc de nabiu i suc de poma són detectables amb mètodes bioinformàtics. Aquests resultats poden servir de base per a futurs estudis que busquin aprofundir en les diferències metabòliques associades al consum d'aquests aliments i el seu possible impacte en la salut.
+
+
+# Referències
+
+L'enllaç al repositori de **GitHub** que conté tota la documentació del projecte és:
+
+https://github.com/MarTorne/Torne-Farre-Mar-PEC1.git
