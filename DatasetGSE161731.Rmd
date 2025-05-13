@@ -30,12 +30,17 @@ Iniciarem l'estudi fent una revisió de l'estudi **Dysregulated transcriptional 
 
 Per tal de trobar nous aspectes de la resposta de l'hoste al SARS-CoV-2, l'estudi va realitzar la seqüenciació d'ARN en 77 mostres de sang perifèrica de 46 subjectes amb COVID-19 i les va comparar amb subjectes amb coronavirus estacional, grip, pneumònia bacteriana i controls sans. El transcriptoma de la sang perifèrica revela aspectes únics de la resposta immunitària a la COVID-19 i proporciona nous enfocaments de diagnòstic basats en biomarcadors. 
 
-En el diseny de l'estudi per definir la resposta transcripcional de la sang perifèrica de l'hoste en subjectes amb infecció per SARS-CoV-2, es va realitzar la seqüenciació d'ARN en mostres de 46 individus amb infecció per SARS-CoV-2 simptomàtica i amb PCR positiva, 14 dels quals es van mostrejar en múltiples moments. Els subjectes es van inscriure quan es van presentar per a atenció clínica i es va registrar el temps des de l'aparició dels símptomes per a cada mostra individual recollida (rang 1-35 dies). Els subjectes amb COVID-19 es van dividir en funció de la gravetat de la malaltia i el temps des de l'aparició dels símptomes (inici ≤10 dies, mitjans 11-21 dies, final >21 dies). Com a comparadors, es van perfilar mostres de sang emmagatzemades de pacients que es presentaven al Servei d'Urgències amb infecció respiratòria aguda (IRA) a causa de coronavirus estacional (n=59), grip (n=17) o pneumònia bacteriana (n=20), i controls sans coincidents (n=19).
+En el disseny de l'estudi per definir la resposta transcripcional de la sang perifèrica de l'hoste en subjectes amb infecció per SARS-CoV-2, es va realitzar la seqüenciació d'ARN en mostres de 46 individus amb infecció per SARS-CoV-2 simptomàtica i amb PCR positiva, 14 dels quals es van mostrejar en múltiples moments. Els subjectes es van inscriure quan es van presentar per a atenció clínica i es va registrar el temps des de l'aparició dels símptomes per a cada mostra individual recollida (rang 1-35 dies). Els subjectes amb COVID-19 es van dividir en funció de la gravetat de la malaltia i el temps des de l'aparició dels símptomes (inici ≤10 dies, mitjans 11-21 dies, final >21 dies). Com a comparadors, es van perfilar mostres de sang emmagatzemades de pacients que es presentaven al Servei d'Urgències amb infecció respiratòria aguda (IRA) a causa de coronavirus estacional (n=59), grip (n=17) o pneumònia bacteriana (n=20), i controls sans coincidents (n=19).
 
 
 # Objectiu
 
-L'estudi té com a objectiu investigar els canvis 
+L'estudi té com a objectiu investigar els canvis Durant el segon repte, us heu familiaritzat amb les dades d'expressió gènica i els
+mètodes per a la identificació de gens diferencialment expressats i l'anàlisi de
+significació biològica. L' objectiu d' aquesta segona PEC serà realitzar una anàlisi d'
+expressió gènica diferencial completa, a partir de dades d' RNA-seq, per respondre a
+preguntes biològiques relacionades amb el perfil transcriptòmic de la resposta a
+diferents infeccions.
 
 En aquest treball, realitzarem un anàlisi exploratòria que ens proporcioni una visió general del dataset. Per fer-ho, crearem un objecte de classe **SummarizedExperiment**, que contingui les dades i les metadades de l'estudi i durem a terme processos de depuració, filtratge i revisió del dataset.
 
@@ -53,7 +58,7 @@ A més, també es pot trobar al repositori **GitHub** (https://github.com/nutrim
 
 ### Descàrrega del dataset GSE161731
 
-A la pàgina de GEO hi trobem diferent informació diversa sobre l'estudi. En l'apartat **Downloas RNA-seq counts** hi trobem els següents fitxers:
+A la pàgina de GEO hi trobem diferent informació sobre l'estudi. En l'apartat **Downloas RNA-seq counts** es poden descarregar els següents fitxers:
 
 _Fitxers proporcionats pels autors_:
 
@@ -85,8 +90,9 @@ _Fitxers NCBI - Generats automàticament per GEO_
 
   •	Human.GRCh38.p13.annot.tsv.gz - Taula d’anotació de gens utilitzada per GEO per etiquetar els gens de les matrius anteriors. Conté informació com l’identificador del gen, nom del gen, coordenades al genoma, tipus de gen, ... 
 
+Per fer l'análisis hem seleccionat els fitxers: GSE161731_counts.csv.gz, GSE161731_counts_key.csv.gz i	GSE161731_key.csv.gz, que estan copiats al directori **dades**.
 
-```{r,eval=TRUE,echo=FALSE}
+```{r chunk 1,eval=TRUE,echo=FALSE,warning=FALSE,message=FALSE}
 # Instal·lem Bioconductor 
 if (!require(BiocManager)){
   install.packages("BiocManager",dep=TRUE)}
@@ -103,39 +109,62 @@ installifnot<-function(pckgName,BioC=TRUE){
 }
 
 # Carreguem els paquets que necessitarem
-installifnot("GEOquery")
+installifnot("GEOquery") # Deixar
 installifnot("SummarizedExperiment") # Deixar
 installifnot("EnsDb.Hsapiens.v86") # Deixar
 installifnot("GenomicRanges") # Deixar
 installifnot("AnnotationDbi")
 installifnot("org.Hs.eg.db")
 installifnot("S4Vectors")
+installifnot("DESeq2") # Deixar
+installifnot("Biobase") # Deixar
+installifnot("arrayQualityMetrics") # Deixar
+installifnot("edgeR") # Deixar
+installifnot("factoextra")
+installifnot("limma") # Deixar
+installifnot("ggplot2") # Deixar
+installifnot("VennDiagram") # Deixar
 
 # Creem els directoris del repositori
 if (!dir.exists("dades")) dir.create("dades")
 if (!dir.exists("resultats")) dir.create("resultats")
 if (!dir.exists("figures")) dir.create("figures")
 
+# Assignem els directoris de treball a variables
 dir_treball<-getwd()
 dir_dades<-file.path(dir_treball,"dades")
 dir_resultats<-file.path(dir_treball,"resultats")
 
 # Guardem els fitxers al repositori- PROVAR perque ara mateix no funciona
 if (!file.exists(file.path(dir_dades,"GSE161731_counts.csv.gz"))){
-  download.file("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE161nnn/GSE161731/suppl/GSE161731%5F#counts.csv.gz",destfile=file.path(dir_dades,"GSE161731_counts.csv.gz"))
+  url<-"https://ftp.ncbi.nlm.nih.gov/geo/series/GSE161nnn/GSE161731/suppl/GSE161731%5Fcounts.csv.gz"
+  utils::download.file(url, destfile=file.path(dir_dades,"GSE161731_counts.csv.gz"), mode="wb") 
+}
+if (!file.exists(file.path(dir_dades,"GSE161731_counts.csv"))){
+  R.utils::gunzip(file.path(dir_dades,"GSE161731_counts.csv.gz"))
 }
 
 if (!file.exists(file.path(dir_dades,"GSE161731_counts_key.csv.gz"))){
-  download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE161731&format=file&file=GSE1#61731%5Fcounts%5Fkey%2Ecsv%2Egz",destfile=file.path(dir_dades,"GSE161731_counts_key.csv.gz"))
+  url<-"https://ftp.ncbi.nlm.nih.gov/geo/series/GSE161nnn/GSE161731/suppl/GSE161731%5Fcounts%5Fkey.csv.gz"
+  utils::download.file(url, destfile=file.path(dir_dades,"GSE161731_counts_key.csv.gz"), mode="wb") 
+}
+if (!file.exists(file.path(dir_dades,"GSE161731_counts_key.csv"))){
+  R.utils::gunzip(file.path(dir_dades,"GSE161731_counts_key.csv.gz"))
 }
 
 if (!file.exists(file.path(dir_dades,"GSE161731_key.csv.gz"))){
-  download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE161731&format=file&file=GSE1#61731%5Fkey%2Ecsv%2Egz",destfile=file.path(dir_dades,"GSE161731_key.csv.gz"))
+  url<-"https://ftp.ncbi.nlm.nih.gov/geo/series/GSE161nnn/GSE161731/suppl/GSE161731%5Fkey.csv.gz"
+  utils::download.file(url, destfile=file.path(dir_dades,"GSE161731_key.csv.gz"), mode="wb") 
+}
+if (!file.exists(file.path(dir_dades,"GSE161731_key.csv"))){
+  R.utils::gunzip(file.path(dir_dades,"GSE161731_key.csv.gz"))
 }
 ```
 
-```{r,eval=TRUE,echo=FALSE}
-# Obtenir l'estudi GEO
+Un cop hem descarregat la matriu d'expressió corresponent i les metadades de GEO i les hem carregat a R, construïm un objecte **SummarizedExperiment** que contingui ambdós. A més agreguem les coordenades gèniques com rowRanges utilitzant les coordenades dels gens humans amb **gens(EnsDb.Hsapiens.v86)**. Per poder construir l'objecte hem eliminat 3 mostres que venien marcades amb el sufix **_batch2** per les que no teniem informació en el fitxer **counts_key**.
+
+```{r chunk 2,eval=TRUE,echo=FALSE,warning=FALSE,message=FALSE}
+# Obtenim l'estudi GEO
 #gse<-getGEO("GSE161731",GSEMatrix=TRUE)
 
 # Revisem la informació que conté cada fitxer
@@ -144,58 +173,61 @@ counts_key<-read.csv(file.path(dir_dades,"GSE161731_counts_key.csv.gz"))
 meta<-read.csv(file.path(dir_dades,"GSE161731_key.csv.gz"))
 head(counts_key)
 head(meta)
-dim(counts_key)
-dim(meta)
 colnames(counts_key)
 colnames(meta)
-table(duplicated(counts_key$rna_id)) # Comprovem si hi ha mostres duplicades
-table(duplicated(counts_key$subject_id)) # Comprovem si hi ha mostres duplicades
+table(duplicated(counts_key$rna_id)) # Comprovem si hi ha rna_id duplicades
+table(duplicated(counts_key$subject_id)) # Comprovem si hi ha subject_id duplicats
 table(counts_key$subject_id)
 
-# Revisem que puguem construïr bé el SummarizedExperiment
+# Revisem que les dimensions dels fitxers permetin construïr el SummarizedExperiment
 rownames(counts_key)<-counts_key$rna_id
 all(colnames(counts) %in% rownames(counts_key)) # Comprovem que coincideixen
 setdiff(colnames(counts),rownames(counts_key))
 
-# Comprovem si a count tenim duplicats
+# Comprovem si les mostres amb sufix _batch2 es corresponen a identificadors que ja existeixen
 mostres_batch2<-c("DU09-02S0000150_batch2","DU09-02S0000154_batch2","DU09-02S0000158_batch2")
 mostres_batch2_suprimides<-gsub("_batch2","",mostres_batch2)
 resultats<-mostres_batch2_suprimides %in% colnames(counts)
 resultats
-counts<-counts[,!colnames(counts) %in% c("DU09-02S0000150_batch2","DU09-02S0000154_batch2","DU09-02S0000158_batch2")] # Suprimim 3 duplicats
+counts<-counts[,!colnames(counts) %in% c("DU09-02S0000150_batch2","DU09-02S0000154_batch2","DU09-02S0000158_batch2")] # Eliminem les 3 mostres
 
-# Construïm SummarizedExperiment
+# Construïm l'objecte SummarizedExperiment
 SE_GSE161731<-SummarizedExperiment(assays=list(counts=as.matrix(counts)),colData=DataFrame(counts_key))
 SE_GSE161731
-saveRDS(SE_GSE161731,file=file.path(dir_resultats,"DatasetGSE161731.rds"))
 
 # Agreguem les coordenades gèniques
 coord_gens<-genes(EnsDb.Hsapiens.v86,filter=GeneIdFilter(rownames(SE_GSE161731)))
-#rowRanges(SE_GSE161731)<-coord_gens # Tenim 60675 files a la matriu d'expressió i 57602 gens 
+#rowRanges(SE_GSE161731)<-coord_gens # No funciona. Tenim 60675 files a la matriu d'expressió i 57602 gens 
 gens_comuns<-intersect(rownames(SE_GSE161731),coord_gens$gene_id) # Seleccionem els gens amb coordenades disponibles
 SE_GSE161731<-SE_GSE161731[gens_comuns,] # Subconjunt de la matriu d'expressió i les coordenades coincidents
 coord_gens_filtrat<-coord_gens[match(gens_comuns,coord_gens$gene_id)]
-rowRanges(SE_GSE161731) <- coord_gens_filtrat # Assignem les rowRanges
+rowRanges(SE_GSE161731)<-coord_gens_filtrat # Assignem les rowRanges
 
-# Gravem SummarizedExperiment
+# Gravem l'objecte SummarizedExperiment
 saveRDS(SE_GSE161731,file=file.path(dir_resultats,"DatasetGSE161731.rds"))
+SE_GSE161731
 ```
 
-```{r,eval=TRUE,echo=FALSE}
-# Netegem counts_key i seleccionem només les cohorts: COVID19, Bacterial i healthy
+Netegem les metadades i seleccionem les cohorts: **COVID19**, **Bacterial** i **healthy**. Assignem el format corresponen a cadascuna de les variables, la edat la convertim a variable numèrica i les variables gender, race, cohort, time_since_onset i hospitalized a factors. També substituim els  caràcters: espais en blanc (" "), guions ("-") i barres ("/"), per guions baixos ("_"). 
+
+I seleccionem 75 mostres de manera aleatòria, utilitzant una llavor amb un format específic.
+
+```{r chunk 3,eval=TRUE,echo=FALSE,warning=FALSE,message=FALSE}
+# Seleccionem les cohorts: COVID19, Bacterial i healthy
 rna_ids_sel<-counts_key$rna_id[counts_key$cohort %in% c("COVID-19","Bacterial","healthy")]
 SE_GSE161731<-SE_GSE161731[,colnames(SE_GSE161731) %in% rna_ids_sel]
 table(colData(SE_GSE161731)$cohort)
 
-# Eliminem duplicats
+# Eliminem els subject_id duplicats
 counts_key_sense_dup<-counts_key[!duplicated(counts_key$subject_id),]
 rna_ids_sense_dup<-counts_key_sense_dup$rna_id
 SE_GSE161731<-SE_GSE161731[,colnames(SE_GSE161731) %in% rna_ids_sense_dup]
 table(duplicated(counts_key_sense_dup$subject_id))  # Ha de donar FALSE
 dim(SE_GSE161731)
 ncol(SE_GSE161731)
+SE_GSE161731
 
-# Definim el format de les variables
+# Definim el format de les variables i eliminem els caràcters especials
 counts_key$age<-as.numeric(counts_key$age)
 counts_key$gender<-as.factor(counts_key$gender)
 levels(counts_key$gender)
@@ -208,6 +240,8 @@ counts_key$time_since_onset<-as.factor(counts_key$time_since_onset)
 levels(counts_key$time_since_onset)
 counts_key$hospitalized<-as.factor(counts_key$hospitalized)
 levels(counts_key$hospitalized)
+counts_key$batch<-as.factor(counts_key$batch)
+levels(counts_key$batch)
 str(counts_key)
 
 # Seleccionem 75 mostres utilitzant una llavor determinada
@@ -217,21 +251,249 @@ mostres_sel<-sample(colnames(SE_GSE161731),75)
 mostres_sel
 SE_GSE161731<-SE_GSE161731[,colnames(SE_GSE161731) %in% mostres_sel]
 dim(SE_GSE161731)
+SE_GSE161731
 ```
 
+ENUNCIAT DE LA PRACTICA-Duu a terme el preprocessat inicial de les dades (eliminació de gens amb baixa expressió, etc.) i la transformació/normalització que consideris apropiada. Suggeriment: Emmagatzema les dades d'expressió normalitzada com un nou assaig (assay) dins de l'objecte SummarizedExperiment.
 
 
 
-En primer lloc descarreguem els fitxers i els guardem al repositori **GitHub** que hem creat per emmagatzemar tota la documentació del projecte.
+Los genes con recuentos muy bajos en todas las librerías proporcionan poca evidencia de expresión diferencial e interfieren con algunas de las aproximaciones estadísticas que se utilizarán más adelante. Además penalizan los ajustes por comparaciones múltiples para estimar las tasas de falsos positivos, lo que resta potencia para detectar genes expresados diferencialmente. Por eso filtramos estos genes.
 
-```{r,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
+Antes de filtrar, expresaremos los contajes en “CPMs” es decir “counts per million” con el fin de evitar que se atribuyan valores demasiado bajos debido a tamaños distintos de las librerías. Es decir, estandarizamos los contajes por el tamaño de la librería y a continuación se realizará el filtraje. Para ello se normalizaran los contajes brutos para las diferentes profundidades de secuenciación (tamaños de librería) para cada muestra y se compararan con los valores de recuento por millón (CPM) utilizando la función cpm() del paquete edgeR.
+
+Elegimos retener aquellos genes que se expresan a un CPM superior a 0,5 en al menos dos muestras. Los tamaños de las librerías se obtienen simplemente sumando las columnas de la matriz de datos, aunque no hace falta que ésto se lleve a cabo explícitamente puesto que la función cpm lo hace de forma automática.
+
+# Filtratge de gens poc expresats
+
+```{r chunk 4,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
+# Expresem el comptatges en CPM i els seleccionem segons criteri
+counts_matriu<-assay(SE_GSE161731)
+cpm_matriu<-cpm(counts_matriu)
+gens_guardats<-rowSums(cpm_matriu>0.5)>=2 # Seleccionem els gens amb cpm>0.5 en almenys 2 mostres
+SE_GSE161731<-SE_GSE161731[gens_guardats,] # Apliquem el filtratge a l'objecte SummarizedExperiment
+SE_GSE161731
+```
+
+# Normalització dels comptatges bruts amb DESeq2 (Variance Stabilizing Transformation)
+
+```{r chunk 5,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
+# Normalitzem els comptatges bruts per les diferents profunditats de secuenciació per cada mostra
+dds<-DESeqDataSet(SE_GSE161731,design=~1)
+dds<-estimateSizeFactors(dds)
+vst<-vst(dds)
+assay(SE_GSE161731,"vst_counts")<-assay(vst) # Afegim la matriu normalitzada com un nou assay
+assayNames(SE_GSE161731)
+```
+
+# Control de qualitat
+
+```{r chunk 6,message=FALSE,warning=FALSE,eval=TRUE,echo=FALSE}
+# Amb les dades pre-processades i normalitzades fem el control de qualitat
+counts_vst<-assay(SE_GSE161731,"vst_counts")
+pheno_dades<-AnnotatedDataFrame(as.data.frame(colData(SE_GSE161731)))
+eset<-ExpressionSet(assayData=counts_vst,phenoData=pheno_dades)
+arrayQualityMetrics(eset,outdir="AQM_resultats",force=TRUE)
+```
+![](AQM_report/box.pgn)
+
+
+ENUNCIAT DE LA PRACTICA-Realitza una anàlisi exploratòria sobre les dades transformades/normalitzades. Pots fer servir PCA, MDS, clustering i/o heatmaps. Identifica i elimina mostres atípiques (outliers). D'acord amb els resultats d'aquestes anàlisis, identifica quines variables en les metadades es poden considerar variables confusores i per tant s'haurien d'incloure en la matriu de disseny. Suggeriment: acoloreix els gràfics anteriors d'acord amb diferents variables i observa la superposició entre elles i la variable explicativa d'interès (cohort).
+
+```{r chunk 7,message=FALSE,warning=FALSE,eval=TRUE,echo=FALSE}
+# Boxplot de los recuentos no normalizados
+dgeObj<-DGEList(counts=counts_matriu)
+logcounts<-cpm(dgeObj,log=TRUE)
+boxplot(logcounts,ylab="Log2-CPM",las=2,xlab="",cex.axis=0.8,main="Boxplots of logCPMs (unnormalised)",cex.main=0.8)
+abline(h=median(logcounts),col="blue")
+
+# Identifiquem en el Boxplot l'outlier que es veu i l'eliminem
+colnames(logcounts)[which.min(apply(logcounts,2,median))]
+#logcounts[,"94478"]
+#counts[,"94478"]
+#hist(logcounts[,"94478"],breaks=50,main="Distribució logCPM per la mostra 94478",xlab="log2-CPM")
+#summary(logcounts[,"94478"])
+#summary(logcounts[,"94189"])
+counts_matriu<-counts_matriu[,colnames(counts_matriu)!="94478"]
+cpm_matriu<-cpm_matriu[,colnames(cpm_matriu)!="94478"]
+vst<-vst[,colnames(vst)!="94478"]
+dgeObj<-dgeObj[,colnames(dgeObj)!="94478"]
+logcounts<-logcounts[,colnames(logcounts)!="94478"]
+SE_GSE161731<-SE_GSE161731[,colnames(SE_GSE161731)!="94478"]
+SE_GSE161731
+```
+
+```{r chunk 8,message=FALSE,warning=FALSE,eval=TRUE,echo=FALSE}
+# Anàlisi de components principals
+pca_dades<-plotPCA(vst,intgroup="cohort",returnData=TRUE)
+percentVar<-round(100*attr(pca_dades,"percentVar"))
+ggplot(pca_dades,aes(PC1,PC2,color=cohort,label=name))+
+  geom_point(size=3)+
+  geom_text(vjust=-0.5,size=3)+
+  xlab(paste0("PC1:",percentVar[1],"% variance")) +
+  ylab(paste0("PC2:",percentVar[2],"% variance")) +
+  theme_minimal()
+
+# Distància entre mostres + Clustering jeràrquic (heatmap)
+sampleDists<-dist(t(assay(vst)))
+sampleDistMatrix<-as.matrix(sampleDists)
+heatmap(as.matrix(sampleDists))
+
+# Identificar i eliminar mostres atípiques-NO ELS TREIEM
+pca_dades$distance<-sqrt((pca_dades$PC1-mean(pca_dades$PC1))^2+(pca_dades$PC2-mean(pca_dades$PC2))^2)
+threshold<-mean(pca_dades$distance)+2*sd(pca_dades$distance) # Un llindar típic pot ser la distància > 2 o 3 desviacions estàndard
+outliers<-pca_dades[pca_dades$distance>threshold,]
+possibles_outliers<-rownames(outliers)
+possibles_outliers
+#vsd<-vsd[,!colnames(vsd) %in% possibles_outliers]
+#SE_GSE161731<-SE_GSE161731[,!colnames(SE_GSE161731) %in% possibles_outliers]
+#SE_GSE161731
+
+# Busquem variables confusores
+# PCA de les dades transformades per gender
+pca_data<-plotPCA(vst,intgroup=c("cohort","gender"),returnData=TRUE)
+percentVar<-round(100*attr(pca_data,"percentVar"))
+ggplot(pca_data,aes(PC1,PC2,color=gender))+
+  geom_point(size=3)+
+  xlab(paste0("PC1: ",percentVar[1],"%"))+
+  ylab(paste0("PC2: ",percentVar[2],"%"))+
+  coord_fixed()+
+  theme_minimal()
+
+# PCA de les dades transformades per race
+pca_data<-plotPCA(vst,intgroup=c("cohort","race"),returnData=TRUE)
+percentVar<-round(100*attr(pca_data,"percentVar"))
+ggplot(pca_data,aes(PC1, PC2,color=race)) +
+  geom_point(size=3)+
+  xlab(paste0("PC1: ",percentVar[1],"%"))+
+  ylab(paste0("PC2: ",percentVar[2],"%"))+
+  coord_fixed()+
+  theme_minimal()
+
+# PCA de les dades transformades per time_since_onset 
+pca_data<-plotPCA(vst,intgroup=c("cohort","time_since_onset"),returnData=TRUE)
+percentVar<-round(100*attr(pca_data,"percentVar"))
+ggplot(pca_data,aes(PC1, PC2,color=time_since_onset)) +
+  geom_point(size=3)+
+  xlab(paste0("PC1: ",percentVar[1],"%"))+
+  ylab(paste0("PC2: ",percentVar[2],"%"))+
+  coord_fixed()+
+  theme_minimal()
+
+# PCA de les dades transformades per hospitalized
+pca_data<-plotPCA(vst,intgroup=c("cohort","hospitalized"),returnData=TRUE)
+percentVar<-round(100*attr(pca_data,"percentVar"))
+ggplot(pca_data,aes(PC1, PC2,color=hospitalized)) +
+  geom_point(size=3)+
+  xlab(paste0("PC1: ",percentVar[1],"%"))+
+  ylab(paste0("PC2: ",percentVar[2],"%"))+
+  coord_fixed()+
+  theme_minimal()
+
+# PCA de les dades transformades per batch
+pca_data<-plotPCA(vst,intgroup=c("cohort","batch"),returnData=TRUE)
+percentVar<-round(100*attr(pca_data,"percentVar"))
+ggplot(pca_data,aes(PC1, PC2,color=batch)) +
+  geom_point(size=3)+
+  xlab(paste0("PC1: ",percentVar[1],"%"))+
+  ylab(paste0("PC2: ",percentVar[2],"%"))+
+  coord_fixed()+
+  theme_minimal()
+```
+POSIBLES CONFUSORES-race time_since_onset hospitalized
+
+Los datos de contajes no se distribuyen normalmente, por lo que si queremos examinar las distribuciones de los recuentos sin procesar, debemos transformarlos, por ejemplo tomando logaritmos (la transformación habitual para contajes).
+
+Podemos usar la función cpm para obtener recuentos log2 por millón, que se corrigen para los diferentes tamaños de biblioteca. La función cpm también agrega una pequeña cantidad evitar tomar log de cero.
+
+Perque no em pinta el boxplot de la mostra 944478? això normalment passa quan una mostra té una distribució molt diferent (valors molt baixos o zero gairebé a tot arreu) i la funció boxplot() li pinta tots els punts individuals (outliers) però no pot dibuixar la caixa perquè no hi ha prou dades centrades.
+
+Per identificar quina mostra és, pots calcular els valors resumits de cada mostra i veure quin té un comportament estrany
+
+```{r,message=FALSE,warning=FALSE,eval=TRUE,echo=FALSE}
+# AIXO CREC QUE ES DELS APUNTS GUARDAR PER SI DE CAS
+
+# Normalizacion
+dgeObj_norm<-calcNormFactors(dgeObj)
+dgeObj_norm
+logcounts_norm<-cpm(dgeObj_norm,log=TRUE)
+boxplot(logcounts,ylab="Log2-CPM",las=2,xlab="",cex.axis=0.8,main="Boxplots of logCPMs (normalised)",cex.main=0.8)
+abline(h = median(logcounts),col="blue")
+
+# Análisis no supervisado de similaridad entre las muestras
+sampleDists<-dist(t(logcounts_norm))
+sampleDists
+library(factoextra)
+fviz_dist(sampleDists)
+
+plot(hclust(sampleDists),labels=colnames(logcounts_norm),main="Dendogram of sample distances",cex.lab=0.8,cex.main=0.9)
+```
+ENUNCIAT DE LA PRACTICA-Construeix la matriu de disseny i les matrius de contrastos adequades per avaluar l'expressió gènica diferencial en les comparacions Bacterial vs healthy i COVID19 vs healthy i realitza una anàlisi d'expressió diferencial. Important: has d'utilitzar el mètode que et proporcioni el següent codi, utilitzant de nou la llavor que generes en la tasca 2:
+set.seed(myseed)
+sample(c("edgeR", "voom+limma", "DESeq2"), mida = 1)
+Suggeriments: (i) inclou les potencials variables confusores, identificades en el pas anterior, en la matriu de disseny; (ii) a més del criteri de significació estadística que consideris, estableix un llindar de log2FC de 1.5 per considerar
+expressió diferencial; (iii) si a més del mètode seleccionat aleatòriament en vols utilitzar un altre i comparar els seus resultats, ¡endavant!
+POSIBLES CONFUSORES-race time_since_onset hospitalized
+
+```{r chunk 9,message=FALSE,warning=FALSE,eval=TRUE,echo=FALSE}
+# Determinem el mètode aleatori
+myseed<-sum(utf8ToInt("martornefarre"))
+set.seed(myseed)
+(metode<-sample(c("edgeR","voom+limma","DESeq2"),size=1))
+
+# Crea la matriu de disseny Suposem que vols controlar per sex i cohort
+design<-model.matrix(~0+cohort+race,data=colData(SE_GSE161731))
+colnames(design)
+
+# Fem l'anàlisi amb el mètode seleccionat
+dds<-DESeqDataSet(SE_GSE161731,design=~cohort)
+dds<-DESeq(dds)
+resultsNames(dds)  # per veure els contrasts disponibles
+
+# Extreure resultats dels dos contrastos
+res_covid<-results(dds, contrast=c("cohort","COVID-19","healthy"))
+res_covid
+res_bacterial<-results(dds, contrast=c("cohort","Bacterial","healthy"))
+res_bacterial
+
+res_covid_sig<-res_covid[which(res_covid$padj<0.05 & abs(res_covid$log2FoldChange)>1.5),]
+res_covid_sig
+nrow(res_covid_sig)
+res_bacterial_sig<-res_bacterial[which(res_bacterial$padj<0.05 & abs(res_bacterial$log2FoldChange)>1.5),]
+res_bacterial_sig
+nrow(res_bacterial_sig)
+
+library(grid)
+venn.plot<-venn.diagram(x=list(
+    COVID_vs_Healthy=rownames(res_covid_sig),
+    Bacterial_vs_Healthy=rownames(res_bacterial_sig)),
+  filename = NULL)
+grid.draw(venn.plot)
+
+
+library(clusterProfiler)
+library(org.Hs.eg.db)
+
+genes_covid <- rownames(res_covid_sig)
+ego <- enrichGO(
+  gene          = genes_covid,
+  OrgDb         = org.Hs.eg.db,
+  keyType       = "ENSEMBL",
+  ont           = "BP",
+  pAdjustMethod = "BH",
+  qvalueCutoff  = 0.05
+)
+as.data.frame(ego)
+
 
 ```
 
-## Construcció d'un objecte de classe SummarizedExperiment
+ENUNCIAT DE LA PRACTICA-Compara els resultats de tots dos contrastos (Bacterial vs healthy i COVID19 vs healthy). Suggeriment: pots utilitzar Venn Diagrams o UpSet plots. 
 
-A continuació, creem un objecte de classe **SummarizedExperiment** amb les dades i metadades de l'estudi. Realitzem diferents transformacions i adaptacions als fitxers per assegurar-nos que els camps comuns siguin iguals i estiguin en el mateix ordre en les bases de dades. A més, ajustarem alguns formats, com ara transformar els camps de **features** a valors numèrics.
-
+ENUNCIAT DE LA PRACTICA-Realitza una anàlisi de sobrerepresentació per identificar les funcions enriquides
+entre els gens sobreexpressats en pacients amb COVID19 en comparació amb
+els controls sans. Utilitza només el domini de Gene Ontology "Biological
+Process". Suggeriment: pots visualitzar els teus resultats utilitzant REVIGO.
 ```{r,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
 
 ```
@@ -245,101 +507,7 @@ A continuació, creem un objecte de classe **SummarizedExperiment** amb les dade
 
 
 ```{r,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
-# Resum estadístic de les dades
-#summary(assay(object_se))  
-
-# Eliminem els metabòlits amb tots els valors a NA, n'hi han 182
-metabolits_NA<-apply(assay(object_se),1,function(x) all(is.na(x)))
-object_se<-object_se[!metabolits_NA,]
-
-# Un metabòlit té nom UNKNOWN
-cat("Metabòlits sense nom assignat\n")
-rownames(object_se)[rownames(object_se)=="UNKNOWN"]<-"99999"
-sum(rownames(object_se)=="99999")
-
-# Substituïm els zeros pel valor mínim/2 corresponent a cada fila
-assay_data<-assay(object_se)
-min_values<-apply(assay_data,1,function(x) ifelse(all(x==0|is.na(x)),NA,min(x[x>0], na.rm=TRUE)/2))
-for (i in seq_len(nrow(assay_data))){
-  assay_data[i,assay_data[i,]==0]<-min_values[i]
-}
-assay(object_se)<-assay_data
-
-# Normalitzem les dades per Z-score 
-assay(object_se)<-scale(assay(object_se))
-
-# Guardem l'objecte SummarizedExperiment
-save(object_se,file="object_se.Rda")
-#load("object_se.Rda")
 ```
-
-Guardem **objecte_es** en format **Rda** al repositori. Aquest és un tipus de format binari utilitzat per R per emmagatzemar objectes en un fitxer que després es pot carregar fàcilment a la memòria. Aquest format permet desar un o més objectes a la vegada i preservar-ne l’estructura i les metadades.
-
-## Anàlisi exploratori amb POMA
-
-```{r,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
-# Instal·lem Bioconductor 
-#if (!require("BiocManager", quietly = TRUE))
-#  install.packages("BiocManager")
-
-# Instal·lem POMA
-#BiocManager::install("POMA")
-
-library(POMA)
-library(ggtext)
-library(magrittr)
-library(ggplot2)
-
-# Creem un objecte SummarizedExperiment de dos bases de dades separades
-features_t<-t(features)  # Trasposem perquè POMA vol la matriu de dades al revés
-cat("Dimensions dels datasets\n")
-dim(metadata)
-dim(features_t)
-object_POMA<-PomaCreateObject(metadata=metadata,features=features_t)
-
-# Eliminem els metabòlits amb tots els valors NA i imputem
-cat("Valors perduts\n")
-sum(is.na(SummarizedExperiment::assay(object_POMA)))
-metabolits_NA<-apply(assay(object_POMA),1,function(x) all(is.na(x)))
-object_POMA<-object_POMA[!metabolits_NA,]
-object_POMA<-PomaImpute(object_POMA,zeros_as_na=FALSE,remove_na=TRUE,cutoff=20,method="knn")
-#assay(object_POMA)
-
-# Normalitzem les dades
-object_POMA_norm<-PomaNorm(object_POMA,sample_norm="none",method="log_pareto")
-
-# Representem l'efecte de la normalització
-PomaBoxplots(object_POMA,x="samples")
-PomaDensity(object_POMA,x="features")+ggplot2::theme(legend.position="none")
-PomaBoxplots(object_POMA_norm,x="samples")
-PomaDensity(object_POMA_norm,x="features")+ggplot2::theme(legend.position="none")
-
-# Revisem els outliers
-outlier_results<-PomaOutliers(object_POMA_norm)
-print(outlier_results)
-
-# Obtenim un objecte pre-processat sense outlier
-pre_processed_object_POMA<-PomaOutliers(object_POMA_norm)$data
-
-# Visualitzem els outliers
-PomaOutliers(pre_processed_object_POMA)$polygon_plot
-```
-
-
-
-## Anàlisi complementari amb POMA
-
-```{r,message=FALSE,warning=FALSE,eval=TRUE,echo=TRUE}
-# Anàlisi de Components Principals (PCA) 
-PomaPCA(pre_processed_object_POMA,outcome=NULL,center=TRUE,scale=TRUE,ncomp=4,labels=FALSE,ellipse=FALSE,load_length=1)
-
-# Anàlisi de Clústers
-PomaClust(pre_processed_object_POMA,method="euclidean",k=NA,k_max=floor(min(dim(data))/2),show_clusters=TRUE,labels=FALSE)
-
-# Gràfic Heatmap
-PomaHeatmap(pre_processed_object_POMA,covs=NULL,sample_names=TRUE,feature_names=FALSE,show_legend=TRUE)
-```
-
 
 
 # Discussió

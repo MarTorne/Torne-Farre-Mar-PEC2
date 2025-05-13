@@ -1,0 +1,6 @@
+INFO [2025-05-13 22:32:13] $x
+INFO [2025-05-13 22:32:13] list(COVID_vs_Healthy = rownames(res_covid_sig), Bacterial_vs_Healthy = rownames(res_bacterial_sig))
+INFO [2025-05-13 22:32:13] 
+INFO [2025-05-13 22:32:13] $filename
+INFO [2025-05-13 22:32:13] NULL
+INFO [2025-05-13 22:32:13] 
